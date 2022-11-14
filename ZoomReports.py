@@ -1,5 +1,4 @@
 import datetime
-import os
 from base64 import b64encode
 import requests
 import json
@@ -101,8 +100,8 @@ class Zoom:
 
         if response.status_code == 200:
             response = json.loads(response.text)
-            meetings = response.get('meetings')
-            # отсортировать список по 'start_time'
+            meetings = response.get("meetings")
+            meetings.sort(key=lambda x: x["start_time"], reverse=True)
             return meetings
         else:
             raise Exception("Error from getting past meetings method!")
