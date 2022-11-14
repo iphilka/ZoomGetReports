@@ -89,6 +89,24 @@ class Zoom:
 
         return meetings
 
+    def get_past_meetings(self, meeting_id: str) -> list:
+        """Получаем список прошедших конференций для переданного ID, если передается дата"""
+        past_meetings_url = f"/past_meetings/{meeting_id}/instances"
+
+        headers = {
+            "Authorization": f"Bearer {self.access_token}",
+        }
+
+        response = requests.get(url=f"{self.base_url}{past_meetings_url}", headers=headers)
+
+        if response.status_code == 200:
+            response = json.loads(response.text)
+            meetings = response.get('meetings')
+            # отсортировать список по 'start_time'
+            return meetings
+        else:
+            raise Exception("Error from getting past meetings method!")
+
     def get_report_participant_on_meeting(self, meeting_id: str) -> list:
         """Получаем отчет о пользователях по конкретной конференции"""
         meeting_id = parser.quote(parser.quote(meeting_id + '/participants'))
