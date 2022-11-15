@@ -88,7 +88,7 @@ class Zoom:
 
         return meetings
 
-    def get_past_meetings(self, meeting_id: str) -> list:
+    def get_past_meetings(self, meeting_id: str, date: str = None) -> list:
         """Получаем список прошедших конференций для переданного ID, если передается дата"""
         past_meetings_url = f"/past_meetings/{meeting_id}/instances"
 
@@ -102,9 +102,14 @@ class Zoom:
             response = json.loads(response.text)
             meetings = response.get("meetings")
             meetings.sort(key=lambda x: x["start_time"], reverse=True)
-            return meetings
         else:
             raise Exception("Error from getting past meetings method!")
+
+        if not date:
+            return meetings
+
+        # выбрасываем результаты не подходящее нам по дате
+        pass
 
     def get_report_participant_on_meeting(self, meeting_id: str) -> list:
         """Получаем отчет о пользователях по конкретной конференции"""
