@@ -111,19 +111,22 @@ class Zoom:
         # выбрасываем результаты не подходящее нам по дате
         pass
 
-    def get_report_participant_on_meeting(self, meeting_id: str) -> list:
+    def get_report_participant_on_meeting(self, meeting_uuid: str) -> list:
         """Получаем отчет о пользователях по конкретной конференции"""
-        meeting_id = parser.quote(parser.quote(meeting_id + '/participants'))
+
+        # добавить двойной энкодинг для uuid (на случай получения / в uuid)
+
+        meeting_id = parser.quote(parser.quote(meeting_uuid))
         print(meeting_id)
 
-        report_participant_url = f"{self.base_url}/report/meetings/{meeting_id}"
+        report_participant_url = f"{self.base_url}/report/meetings/{meeting_id}/participants"
 
         headers = {
             "Authorization": f"Bearer {self.access_token}",
         }
 
         params = {
-            "page_size": 200,  # хардкожу ответ от api до 300 ответов, чтобы не перебирать страницы
+            "page_size": 300,  # хардкожу ответ от api до 300 ответов, чтобы не перебирать страницы
         }
 
         response = requests.get(url=report_participant_url, headers=headers, params=params)

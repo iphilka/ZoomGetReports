@@ -17,4 +17,6 @@ zoom.get_auth_token()
 
 meetings = zoom.get_past_meetings(meeting_id="83050322455")
 
+participants_report = zoom.get_report_participant_on_meeting(meetings[0].get("uuid"))
+
 print("Done!")
