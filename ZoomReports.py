@@ -1,4 +1,5 @@
-import datetime
+import pprint
+from datetime import date, datetime
 from base64 import b64encode
 import requests
 import json
@@ -68,8 +69,9 @@ class Zoom:
                 meetings_from_response = response.get("meetings")
 
                 for meet in meetings_from_response:
-                    # переводим дату из конференции в нужный формат и проверяем соответствие искомой даты и даты конференции
-                    meet_datetime = datetime.datetime.strptime(meet.get("start_time"), "%Y-%m-%dT%H:%M:%SZ")
+                    # переводим дату из конференции в нужный формат и проверяем соответствие искомой даты
+                    # и даты конференции
+                    meet_datetime = datetime.strptime(meet.get("start_time"), "%Y-%m-%dT%H:%M:%SZ")
                     meet_date = meet_datetime.replace(hour=0, minute=0, second=0)
                     if date == meet_date:
                         meetings.append(meet)
@@ -88,7 +90,7 @@ class Zoom:
 
         return meetings
 
-    def get_past_meetings(self, meeting_id: str, date: str = None) -> list:
+    def get_past_meetings(self, meeting_id: str, need_date: date = None) -> list:
         """Получаем список прошедших конференций для переданного ID, если передается дата"""
         past_meetings_url = f"/past_meetings/{meeting_id}/instances"
 
@@ -107,15 +109,23 @@ class Zoom:
 
         if not date:
             return meetings
+        else:
+            # убираем собрания с ненужной датой
+            for meet in list(meetings):
+                meet_date = datetime.strptime(meet.get("start_time"), "%Y-%m-%dT%H:%M:%SZ").date()
+                if not meet_date == need_date:
+                    meetings.remove(meet)
+                    print(f"Not equal: meet_date - {meet_date} || need_date - {need_date}")
+            pprint.pprint(meetings)
+            return meetings
 
-        # выбрасываем результаты не подходящее нам по дате
-        pass
-
-    def get_report_participant_on_meeting(self, meeting_uuid: str) -> list:
+    def get_report_participant_on_meeting(self, meeting: dict) -> dict:
         """Получаем отчет о пользователях по конкретной конференции"""
 
         # добавить двойной энкодинг для uuid (на случай получения / в uuid)
-
+        meeting_uuid = meeting.get("uuid")
+        # meeting_date = datetime.strptime(meeting.get("start_date"), "%Y-%m-%dT%H:%M:%SZ")
+        meeting_date = meeting.get("start_time")
         meeting_id = parser.quote(parser.quote(meeting_uuid))
         print(meeting_id)
 
@@ -125,6 +135,7 @@ class Zoom:
             "Authorization": f"Bearer {self.access_token}",
         }
 
+        # TODO: предусмотреть вариант, с количеством участников > 300
         params = {
             "page_size": 300,  # хардкожу ответ от api до 300 ответов, чтобы не перебирать страницы
         }
@@ -132,5 +143,8 @@ class Zoom:
         response = requests.get(url=report_participant_url, headers=headers, params=params)
         if response.status_code == 200:
             response = json.loads(response.text)
-            return response.get("participants")
-
+            data = {
+                "participants": response.get("participants"),
+                "meeting_date": meeting_date,
+            }
+            return data
