@@ -5,6 +5,7 @@ import requests
 import json
 
 import urllib.parse as parser
+import urllib.request as req
 
 
 class Zoom:
@@ -115,18 +116,15 @@ class Zoom:
                 meet_date = datetime.strptime(meet.get("start_time"), "%Y-%m-%dT%H:%M:%SZ").date()
                 if not meet_date == need_date:
                     meetings.remove(meet)
-                    print(f"Not equal: meet_date - {meet_date} || need_date - {need_date}")
-            pprint.pprint(meetings)
+                    # print(f"Not equal: meet_date - {meet_date} || need_date - {need_date}")
             return meetings
 
     def get_report_participant_on_meeting(self, meeting: dict) -> dict:
         """Получаем отчет о пользователях по конкретной конференции"""
 
-        # добавить двойной энкодинг для uuid (на случай получения / в uuid)
         meeting_uuid = meeting.get("uuid")
-        # meeting_date = datetime.strptime(meeting.get("start_date"), "%Y-%m-%dT%H:%M:%SZ")
         meeting_date = meeting.get("start_time")
-        meeting_id = parser.quote(parser.quote(meeting_uuid))
+        meeting_id = parser.quote(parser.quote(meeting_uuid, safe=''), safe='')
         print(meeting_id)
 
         report_participant_url = f"{self.base_url}/report/meetings/{meeting_id}/participants"
@@ -147,4 +145,5 @@ class Zoom:
                 "participants": response.get("participants"),
                 "meeting_date": meeting_date,
             }
+            print("Done response")
             return data
