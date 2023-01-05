@@ -1,10 +1,11 @@
-import datetime
-import os
+import pprint
+from datetime import date, datetime
 from base64 import b64encode
 import requests
 import json
 
 import urllib.parse as parser
+import urllib.request as req
 
 
 class Zoom:
@@ -69,8 +70,9 @@ class Zoom:
                 meetings_from_response = response.get("meetings")
 
                 for meet in meetings_from_response:
-                    # переводим дату из конференции в нужный формат и проверяем соответствие искомой даты и даты конференции
-                    meet_datetime = datetime.datetime.strptime(meet.get("start_time"), "%Y-%m-%dT%H:%M:%SZ")
+                    # переводим дату из конференции в нужный формат и проверяем соответствие искомой даты
+                    # и даты конференции
+                    meet_datetime = datetime.strptime(meet.get("start_time"), "%Y-%m-%dT%H:%M:%SZ")
                     meet_date = meet_datetime.replace(hour=0, minute=0, second=0)
                     if date == meet_date:
                         meetings.append(meet)
@@ -89,23 +91,59 @@ class Zoom:
 
         return meetings
 
-    def get_report_participant_on_meeting(self, meeting_id: str) -> list:
-        """Получаем отчет о пользователях по конкретной конференции"""
-        meeting_id = parser.quote(parser.quote(meeting_id + '/participants'))
-        print(meeting_id)
-
-        report_participant_url = f"{self.base_url}/report/meetings/{meeting_id}"
+    def get_past_meetings(self, meeting_id: str, need_date: date = None) -> list:
+        """Получаем список прошедших конференций для переданного ID, если передается дата"""
+        past_meetings_url = f"/past_meetings/{meeting_id}/instances"
 
         headers = {
             "Authorization": f"Bearer {self.access_token}",
         }
 
+        response = requests.get(url=f"{self.base_url}{past_meetings_url}", headers=headers)
+
+        if response.status_code == 200:
+            response = json.loads(response.text)
+            meetings = response.get("meetings")
+            meetings.sort(key=lambda x: x["start_time"], reverse=True)
+        else:
+            raise Exception("Error from getting past meetings method!")
+
+        if not date:
+            return meetings
+        else:
+            # убираем собрания с ненужной датой
+            for meet in list(meetings):
+                meet_date = datetime.strptime(meet.get("start_time"), "%Y-%m-%dT%H:%M:%SZ").date()
+                if not meet_date == need_date:
+                    meetings.remove(meet)
+                    # print(f"Not equal: meet_date - {meet_date} || need_date - {need_date}")
+            return meetings
+
+    def get_report_participant_on_meeting(self, meeting: dict) -> dict:
+        """Получаем отчет о пользователях по конкретной конференции"""
+
+        meeting_uuid = meeting.get("uuid")
+        meeting_date = meeting.get("start_time")
+        meeting_id = parser.quote(parser.quote(meeting_uuid, safe=''), safe='')
+        print(meeting_id)
+
+        report_participant_url = f"{self.base_url}/report/meetings/{meeting_id}/participants"
+
+        headers = {
+            "Authorization": f"Bearer {self.access_token}",
+        }
+
+        # TODO: предусмотреть вариант, с количеством участников > 300
         params = {
-            "page_size": 200,  # хардкожу ответ от api до 300 ответов, чтобы не перебирать страницы
+            "page_size": 300,  # хардкожу ответ от api до 300 ответов, чтобы не перебирать страницы
         }
 
         response = requests.get(url=report_participant_url, headers=headers, params=params)
         if response.status_code == 200:
             response = json.loads(response.text)
-            return response.get("participants")
-
+            data = {
+                "participants": response.get("participants"),
+                "meeting_date": meeting_date,
+            }
+            print("Done response")
+            return data
